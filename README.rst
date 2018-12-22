@@ -5,14 +5,14 @@
 .. image:: https://img.shields.io/badge/docs-read%20now-blue.svg
    :target: https://trio.readthedocs.io/en/latest/?badge=latest
    :alt: Documentation Status
-   
+
 .. image:: https://img.shields.io/pypi/v/trio.svg
    :target: https://pypi.org/project/trio
    :alt: Latest PyPi version
 
 .. image:: https://img.shields.io/conda/vn/conda-forge/trio.svg
    :target: https://anaconda.org/conda-forge/trio
-   :alt: Latest conda-forge version   
+   :alt: Latest conda-forge version
 
 .. image:: https://travis-ci.org/python-trio/trio.svg?branch=master
    :target: https://travis-ci.org/python-trio/trio
@@ -29,7 +29,7 @@
 Trio – async I/O for humans and snake people
 ============================================
 
-*P.S. your API is a user interface – Kenneth Reitz*
+*「APIはuser interfaceそのもの」Kenneth Reitzの言葉*
 
 .. Github carefully breaks rendering of SVG directly out of the repo,
    so we have to redirect through cdn.rawgit.com
@@ -45,75 +45,73 @@ Trio – async I/O for humans and snake people
    :width: 200px
    :align: right
 
-The Trio project's goal is to produce a production-quality,
-`permissively licensed
-<https://github.com/python-trio/trio/blob/master/LICENSE>`__,
-async/await-native I/O library for Python. Like all async libraries,
-its main purpose is to help you write programs that do **multiple
-things at the same time** with **parallelized I/O**. A web spider that
-wants to fetch lots of pages in parallel, a web server that needs to
-juggle lots of downloads and websocket connections at the same time, a
-process supervisor monitoring multiple subprocesses... that sort of
-thing. Compared to other libraries, Trio attempts to distinguish
-itself with an obsessive focus on **usability** and
-**correctness**. Concurrency is complicated; we try to make it *easy*
-to get things *right*.
+このprojectのgoalは、高品質で
+`license <https://github.com/python-trio/trio/blob/master/LICENSE>`__
+が寛容でasync/await構文の使えるPython向けの非同期入出力libraryを作ることです。
+Trioも他の非同期libraryと同じで複数の入出力を並行して行うcodeを書くのを助けてくれます。
+例えば 大量のpageを並行して落とす必要のあるweb収集program、
+大量のdownload要求や接続要求に応えるweb server、複数の子processを管理する親process等です。
+またTrioは使いやすさに重きを置く事で他のlibraryとの差別化を図ろうとしています。
+一般的に並行処理は複雑なものですから、これを簡単に正確に書けるようにしたいのです。
 
-Trio was built from the ground up to take advantage of the `latest
-Python features <https://www.python.org/dev/peps/pep-0492/>`__, and
-draws inspiration from `many sources
-<https://github.com/python-trio/trio/wiki/Reading-list>`__, in
-particular Dave Beazley's `Curio <https://curio.readthedocs.io/>`__.
-The resulting design is radically simpler than older competitors like
-`asyncio <https://docs.python.org/3/library/asyncio.html>`__ and
-`Twisted <https://twistedmatrix.com/>`__, yet just as capable. Trio is
-the Python I/O library I always wanted; I find it makes building
+Trioは
+`async/await構文 <https://www.python.org/dev/peps/pep-0492/>`__
+の持つ利点を基に築かれいて、また
+`他の様々な物 <https://github.com/python-trio/trio/wiki/Reading-list>`__
+から影響を受けています。(特にDave Beazleyさんの
+`Curio <https://curio.readthedocs.io/>`__
+)。
+その結果
+`asyncio <https://docs.python.org/3/library/asyncio.html>`__
+や
+`Twisted <https://twistedmatrix.com/>`__
+のような古参と比べると、最低限の機能は持ちながらも圧倒的に簡素なAPIに仕上がっています。
+このTrioこそが私が常に欲していたPython用入出力libraryなのです。
+I find it makes building
 I/O-oriented programs easier, less error-prone, and just plain more
 fun. Perhaps you'll find the same.
 
-This project is young and still somewhat experimental: the overall
-design is solid and the existing features are fully tested and
-documented, but you may encounter missing functionality or rough
-edges. We *do* encourage you do use it, but you should `read and
-subscribe to issue #1
-<https://github.com/python-trio/trio/issues/1>`__ to get warning and a
-chance to give feedback about any compatibility-breaking changes.
+このprojectはまだ始まったばかりで実験段階です。
+全体の構想は固まっていて実装済の機能は完全にtestされていて文書化もされていますが、
+時々欲しい機能が無かったり荒削りな部分に出遭ったりするかもしれません。
+それでも私達はTrioを使うことを応援しますが、まず最初に
+`issue #1 <https://github.com/python-trio/trio/issues/1>`__
+を購読するのを忘れないでください。
+互換性の無いAPI変更に関する情報をそこで得られます。
 
 
-Where to next?
---------------
+次は何する?
+------
 
-**I want to try it out!** Awesome! We have a `friendly tutorial
-<https://trio.readthedocs.io/en/latest/tutorial.html>`__ to get you
-started; no prior experience with async coding is required.
+「 **実際に使ってみたい!** 」
+いいね! 始めるならここに
+`易しいtutorial <https://trio.readthedocs.io/en/latest/tutorial.html>`__
+があるよ。非同期programmingの経験が無くても読めるから安心してね。
 
-**Ugh, I don't want to read all that – show me some code!** It's a
-good tutorial, Brent! But if you're impatient, here's a `simple
-concurrency example
-<https://trio.readthedocs.io/en/latest/tutorial.html#tutorial-example-tasks-intro>`__,
-an `echo client
-<https://trio.readthedocs.io/en/latest/tutorial.html#tutorial-echo-client-example>`__,
-and an `echo server
-<https://trio.readthedocs.io/en/latest/tutorial.html#tutorial-echo-server-example>`__.
+「 **ええ！？これ全部読むのしんどいよ。とにかくcodeを見せてくれ** 」
+せっかくの素晴らしいtutorialなのに！でもどうしてもと言うなら
 
-**Cool, but will it work on my system?** Probably! As long as you have
-some kind of Python 3.5-or-better (CPython or the latest PyPy3 are
-both fine), and are using Linux, macOS, or Windows, then trio should
-absolutely work. *BSD and illumos likely work too, but we don't have
-testing infrastructure for them. All of our dependencies are pure
-Python, except for CFFI on Windows, and that has wheels available, so
-installation should be easy.
+`simple concurrency example <https://trio.readthedocs.io/en/latest/tutorial.html#tutorial-example-tasks-intro>`__ 、
+`echo client <https://trio.readthedocs.io/en/latest/tutorial.html#tutorial-echo-client-example>`__ 、
+`echo server <https://trio.readthedocs.io/en/latest/tutorial.html#tutorial-echo-server-example>`__ 。
 
-**I tried it but it's not working.** Sorry to hear that! You can try
-asking for help in our `chat room
-<https://gitter.im/python-trio/general>`__, `filing a bug
-<https://github.com/python-trio/trio/issues/new>`__, or `posting a
-question on StackOverflow
-<https://stackoverflow.com/questions/ask?tags=python+python-trio>`__, and
-we'll do our best to help you out.
+「 **いいね、でもこれ僕のPCで動くの？** 」
+多分ね! Python3.5以上(CPythonとPyPy3どちらでも可)を持っていて、
+LinuxかMaxOSかWindowsを使ってるなら動くはずだよ。
+BSDとillumos系も動くはずだけど、これらの環境用のtestはしてないよ。
+依存関係の内、Windowsに必要なCFFIを除いては全て純Pythonで、CFFIにはwheelが用意されているからinstallationは簡単なはずだよ。
 
-**Trio is awesome and I want to help make it more awesome!** You're
-the best! There's tons of work to do – filling in missing
+「 **試したけど動かなかったよ** 」
+それは残念!
+`chat room <https://gitter.im/python-trio/general>`__
+で誰かに訊くか、
+`issueを上げる <https://github.com/python-trio/trio/issues/new>`__
+か
+`StackOverflowで質問する <https://stackoverflow.com/questions/ask?tags=python+python-trio>`__
+とかしてね。
+
+「 **Trio最高だよ。もっと良くする為に何か貢献したい!** 」
+You're the best! There's tons of work to do – filling in missing
 functionality, building up an ecosystem of trio-using libraries,
 usability testing (e.g., maybe try teaching yourself or a friend to
 use trio and make a list of every error message you hit and place
@@ -121,19 +119,20 @@ where you got confused?), improving the docs, ... check out our `guide
 for contributors
 <https://trio.readthedocs.io/en/latest/contributing.html>`__!
 
-**I don't have any immediate plans to use it, but I love geeking out
-about I/O library design!** That's a little weird? But tbh you'll fit
+「 **別にこれを使う予定があるわけじゃないけど、入出力libraryのdesignに興味がある!** 」
+That's a little weird? But tbh you'll fit
 in great around here. Check out our `discussion of design choices
 <https://trio.readthedocs.io/en/latest/design.html#user-level-api-principles>`__,
 `reading list
 <https://github.com/python-trio/trio/wiki/Reading-list>`__, and
 `issues tagged design-discussion
-<https://github.com/python-trio/trio/labels/design%20discussion>`__.
+<https://github.com/python-trio/trio/labels/design%20discussion>`__。
 
-**I want to make sure my company's lawyers won't get angry at me!** No
-worries, trio is permissively licensed under your choice of MIT or
-Apache 2. See `LICENSE
-<https://github.com/python-trio/trio/blob/master/LICENSE>`__ for details.
+「 **利用規約は？** 」
+心配ないよ。TrioはMITとApache2のどちらか好きな方のlicenseで使えるよ。
+詳しくは
+`LICENSE <https://github.com/python-trio/trio/blob/master/LICENSE>`__
+を見てね。
 
 
 ..
@@ -208,9 +207,8 @@ Apache 2. See `LICENSE
      http://inamidst.com/sw/trio/ -- dead for a ~decade
 
 
-Code of conduct
----------------
+このprojectの規則
+------------
 
-Contributors are requested to follow our `code of conduct
-<https://trio.readthedocs.io/en/latest/code-of-conduct.html>`__ in all
-project spaces.
+`これ <https://trio.readthedocs.io/en/latest/code-of-conduct.html>`__
+に従ってね。
