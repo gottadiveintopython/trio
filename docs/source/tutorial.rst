@@ -69,42 +69,43 @@ Tutorial
 
 .. currentmodule:: trio
 
-Welcome to the Trio tutorial! Trio is a modern Python library for
-writing asynchronous applications – that is, programs that want to do
+Trioのtutorialへようこそ!
+Trioは非同期programを書く為の新しいlibraryです。
+– that is, programs that want to do
 multiple things at the same time with parallelized I/O, like a web
 spider that fetches lots of pages in parallel, a web server juggling
-lots of simultaneous downloads... that sort of thing. Here we'll try
-to give a gentle introduction to asynchronous programming with Trio.
+lots of simultaneous downloads... that sort of thing.
+ここではTrioを使って非同期programmingをする手順をできるだけ優しく説明できたらと思います。
 
-We assume that you're familiar with Python in general, but don't worry
-– we don't assume you know anything about asynchronous programming or
-Python's new ``async/await`` feature.
+このtutorialの読者にはPythonに慣れ親しんだ人を想定していますが、非同期programmingに関しては
+何も知らなくても大丈夫です。
 
-Also, unlike many ``async/await`` tutorials, we assume that your goal
-is to *use* Trio to write interesting programs, so we won't go into
-the nitty-gritty details of how ``async/await`` is implemented inside
-the Python interpreter. The word "coroutine" is never mentioned. The
-fact is, you really don't *need* to know any of that stuff unless you
-want to *implement* a library like Trio, so we leave it out (though
-we'll throw in a few links for those who want to dig deeper).
+また、他の多くの ``async/await`` に関するtutorialと違って、 このtutorialは
+Trioを使って楽しくcodeを書けるようになる事を目的としています。
+なのでPython interpreterがどのように ``async/await構文`` を実現しているかのような
+詳細に触れるつもりはありません。
+"coroutine"という言葉も使いません。
+そのような詳細を知る必要があるのは、自分でTrioのような非同期libraryを作る時のみです。
+なのでそれに関してはlinkを貼るだけにしておきます。
 
-Okay, ready? Let's get started.
-
-
-Before you begin
-----------------
-
-1. Make sure you're using Python 3.5 or newer.
-
-2. ``python3 -m pip install --upgrade trio`` (or on Windows, maybe
-   ``py -3 -m pip install --upgrade trio`` – `details
-   <https://packaging.python.org/installing/>`__)
-
-3. Can you ``import trio``? If so then you're good to go!
+それじゃあ準備はいいですか? 始めましょう。
 
 
-If you get lost or confused...
-------------------------------
+始める前に
+-----
+
+1. Python 3.5以上を使っている事を確かめてください。
+
+2. ``python3 -m pip install --upgrade trio`` (Windowsだと
+   ``py -3 -m pip install --upgrade trio`` かもしれません –
+   `詳細 <https://packaging.python.org/installing/>`__
+   )
+
+3. ``import trio`` は成功しますか? したら次に進みましょう。
+
+
+困ったら
+----
 
 ...then we want to know! We have a friendly `chat channel
 <https://gitter.im/python-trio/general>`__, you can ask questions
@@ -118,77 +119,66 @@ it!).
 Async functions
 ---------------
 
-Python 3.5 added a major new feature: async functions. Using Trio is
-all about writing async functions, so let's start there.
+Python 3.5では一つ大きな機能が加わりました、async関数です。
+Trioを使うという事はasync関数を書くという事です。
 
-An async function is defined like a normal function, except you write
-``async def`` instead of ``def``::
+async関数は ``def`` の代わりに ``async def`` と書く事を除いては通常の関数と同じです::
 
-   # A regular function
+   # 通常の関数
    def regular_double(x):
        return 2 * x
 
-   # An async function
+   # async関数
    async def async_double(x):
        return 2 * x
 
-"Async" is short for "asynchronous"; we'll sometimes refer to regular
-functions like ``regular_double`` as "synchronous functions", to
-distinguish them from async functions.
+"async" は "asynchronous" の略です。私達は時々通常の関数をasync関数と区別するために
+``regular_double`` という風に名付けるでしょう。
 
-From a user's point of view, there are two differences between an
-async function and a regular function:
+関数を呼び出す側からすると、async関数と通常の関数には二つの違いがあります。
 
-1. To call an async function, you have to use the ``await``
-   keyword. So instead of writing ``regular_double(3)``, you write
-   ``await async_double(3)``.
+1. async関数を呼ぶ時には, 予約語 ``await`` を使わないといけません。つまり
+   ``async_double(3)`` ではなく ``await async_double(3)`` です。
 
-2. You can't use the ``await`` keyword inside the body of a regular
-   function. If you try it, you'll get a syntax error::
+2. ``await`` を通常の関数の中で使うことはできません。もしすると::
 
       def print_double(x):
-          print(await async_double(x))   # <-- SyntaxError here
+          print(await async_double(x))   # <-- 構文error
 
-   But inside an async function, ``await`` is allowed::
+   構文errorが起きます。async関数の中でのみ ``await`` が使えます::
 
       async def print_double(x):
           print(await async_double(x))   # <-- OK!
 
-Now, let's think about the consequences here: if you need ``await`` to
-call an async function, and only async functions can use
-``await``... here's a little table:
+まとめるとこういう事です。
 
-=======================  ==================================  ===================
-If a function like this  wants to call a function like this  is it gonna happen?
-=======================  ==================================  ===================
-sync                     sync                                ✓
-sync                     async                               **NOPE**
-async                    sync                                ✓
-async                    async                               ✓
-=======================  ==================================  ===================
+========  ==========  ===
+呼び出す側の関数  呼び出される側の関数  OK？
+========  ==========  ===
+通常        通常          ✓
+通常        async       **駄目**
+async     通常          ✓
+async     async       ✓
+========  ==========  ===
 
 So in summary: As a user, the entire advantage of async functions over
 regular functions is that async functions have a superpower: they can
 call other async functions.
 
-This immediately raises two questions: how, and why? Specifically:
+ここで二つの疑問が湧きます。
 
-When your Python program starts up, it's running regular old sync
-code. So there's a chicken-and-the-egg problem: once we're running an
-async function we can call other async functions, but *how* do we call
-that first async function?
+1. Python programは立ち上がった時には通常の関数のように非asyncなcodeとして動いています。
+   そしてasync関数はasync関数からしか呼べません。
+   じゃあ一番最初のasync関数はどのように呼べばいいのでしょうか？
 
-And, if the only reason to write an async function is that it can call
-other async functions, *why* on earth would we ever use them in
-the first place? I mean, as superpowers go this seems a bit
-pointless. Wouldn't it be simpler to just... not use any async
-functions at all?
+2. async関数を書く理由が別のasync関数を呼ぶためだけなのなら、
+   何故そもそもasync関数を使わないといけないのでしょうか？
+   例えばasync関数を使わずに書いちゃいけないのでしょうか？
 
-This is where an async library like Trio comes in. It provides two
-things:
+これがTrioのような非同期libraryがある理由です。
+Trioは以下の機能を提供します。
 
-1. A runner function, which is a special *synchronous* function that
-   takes and calls an *asynchronous* function. In Trio, this is
+1. async関数を引数に取って呼び出してくれる通常の関数
    ``trio.run``::
 
       import trio
@@ -198,21 +188,20 @@ things:
 
       trio.run(async_double, 3)  # returns 6
 
-   So that answers the "how" part.
+   これによって一つ目の疑問は解決します。
 
-2. A bunch of useful async functions – in particular, functions for
-   doing I/O. So that answers the "why": these functions are async,
-   and they're useful, so if you want to use them, you have to write
-   async code. If you think keeping track of these ``async`` and
+2. 便利なasync関数群、特に入出力関連。
+   これが2つ目の疑問に対する答えになります。
+   これらの便利な関数群を使いたいならasyncなcodeを書くしか選択肢はありません。
+   If you think keeping track of these ``async`` and
    ``await`` things is annoying, then too bad – you've got no choice
    in the matter! (Well, OK, you could just not use trio. That's a
    legitimate option. But it turns out that the ``async/await`` stuff
    is actually a good thing, for reasons we'll discuss a little bit
    later.)
 
-   Here's an example function that uses
-   :func:`trio.sleep`. (:func:`trio.sleep` is like :func:`time.sleep`,
-   but with more async.)
+   ここで一つTrioのasync関数の一つである :func:`trio.sleep` を使った例を見せましょう。
+   (:func:`trio.sleep` は :func:`time.sleep` の非同期版)
 
    .. code-block:: python3
 
@@ -221,38 +210,37 @@ things:
       async def double_sleep(x):
           await trio.sleep(2 * x)
 
-      trio.run(double_sleep, 3)  # does nothing for 6 seconds then returns
+      trio.run(double_sleep, 3)  # 特に何もせず、6秒間経つと処理を返す
 
 .. _async-sandwich:
 
-So it turns out our ``async_double`` function is actually a bad
-example. I mean, it works, it's fine, there's nothing *wrong* with it,
-but it's pointless: it could just as easily be written as a regular
-function, and it would be more useful that way. ``double_sleep`` is a
+これは問題なく動きはしますが、悪い例です。
+悪いとはつまり、こんな事をする意味が無いのです。
+同じ事をしたいなら同期codeで書いたほうがよっぽど良いでしょう。
+ただ、ここで説明したいのはそういった良し悪しではなく一般的に非同期codeがどのような構造を取るのかという事です。
+ ``double_sleep`` is a
 much more typical example: we have to make it async, because it calls
-another async function. The end result is a kind of async sandwich,
-with trio on both sides and our code in the middle:
+another async function.
+結果として ``double_sleep`` の両端をtrioが挟んだsandwichのような構造になります。
 
 .. code-block:: none
 
   trio.run -> double_sleep -> trio.sleep
 
-This "sandwich" structure is typical for async code; in general, it
-looks like:
+この "sandwich" 構造は典型的な非同期codeです。
+多くの場合
 
 .. code-block:: none
 
   trio.run -> [async function] -> ... -> [async function] -> trio.whatever
 
-It's exactly the functions on the path between :func:`trio.run` and
-``trio.whatever`` that have to be async. Trio provides the async
-bread, and then your code makes up the async sandwich's tasty async
-filling. Other functions (e.g., helpers you call along the way) should
+という形になるでしょう。trioがsandwichのパンで、あなたがその間の具を埋めるのです。
+Other functions (e.g., helpers you call along the way) should
 generally be regular, non-async functions.
 
 
-Warning: don't forget that ``await``!
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+注意: ``await`` を忘れないで!
+~~~~~~~~~~~~~~~~~~~~~
 
 Now would be a good time to open up a Python prompt and experiment a
 little with writing simple async functions and running them with
