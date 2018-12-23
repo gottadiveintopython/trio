@@ -152,14 +152,14 @@ async関数は ``def`` の代わりに ``async def`` と書く事を除いては
 
 まとめるとこういう事です。
 
-========  ==========  ===
-呼び出す側の関数  呼び出される側の関数  OK？
-========  ==========  ===
-通常        通常          ✓
-通常        async       **駄目**
-async     通常          ✓
-async     async       ✓
-========  ==========  ===
+=======================  ==================================  ===================
+If a function like this  wants to call a function like this  is it gonna happen?
+=======================  ==================================  ===================
+sync                     sync                                ✓
+sync                     async                               **NOPE**
+async                    sync                                ✓
+async                    async                               ✓
+=======================  ==================================  ===================
 
 So in summary: As a user, the entire advantage of async functions over
 regular functions is that async functions have a superpower: they can
