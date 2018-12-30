@@ -1,5 +1,5 @@
-Trio's core functionality
-=========================
+Trioの中核機能
+=========
 
 .. module:: trio
 
@@ -13,30 +13,29 @@ If you want to use trio, then the first thing you have to do is call
 .. autofunction:: run
 
 
-General principles
-------------------
+基本原則
+----
 
 .. _checkpoints:
 
 Checkpoints
 ~~~~~~~~~~~
 
-When writing code using trio, it's very important to understand the
-concept of a *checkpoint*. Many of trio's functions act as checkpoints.
+trioを使ってcodeをかいている時には *checkpoint* の概念を理解することが重要です。
+trioの多くの関数はこのcheckpointとして機能します。
 
-A checkpoint is two things:
+checkpointには二つの役割があります:
 
-1. It's a point where trio checks for cancellation. For example, if
-   the code that called your function set a timeout, and that timeout
-   has expired, then the next time your function executes a checkpoint
-   trio will raise a :exc:`Cancelled` exception. See
-   :ref:`cancellation` below for more details.
+1. 一つはそこが中断可能な地点になることです。
+   例えばあなたの書いた関数を呼び出した側が時間制限を設けたとして、それが過ぎたとします。
+   するとあなたの書いた関数がcheckpointに差し掛かった時点でtrioは
+   :exc:`Cancelled` 例外を投げます。
+   詳しくは :ref:`cancellation` を見てください。
 
-2. It's a point where the trio scheduler checks its scheduling policy
-   to see if it's a good time to switch to another task, and
-   potentially does so. (Currently, this check is very simple: the
-   scheduler always switches at every checkpoint. But `this might
-   change in the future
+2. もう一つはそこが他のtaskへの切り替え可能な地点になることです。
+   trioはここで他のtaskに切り替えるべきか否かを考え、良い頃合いだと判断すれば切り替えます。
+   (現在の実装は単純で、checkpointに差し掛かると常に他のtaskに切り替わります。
+   ただこれは将来変わるかもしれません。
    <https://github.com/python-trio/trio/issues/32>`__.)
 
 When writing trio code, you need to keep track of where your
@@ -180,9 +179,10 @@ without doing anything else, and that
 arbitrary block of code contains a checkpoint.
 
 
-Thread safety
-~~~~~~~~~~~~~
+Thread 安全性
+~~~~~~~~~~
 
+ほとんどのtrioのAPIはthread安全 **ではありません** 。
 The vast majority of trio's API is *not* thread safe: it can only be
 used from inside a call to :func:`trio.run`. This manual doesn't
 bother documenting this on individual calls; unless specifically noted
@@ -193,10 +193,10 @@ functions from anywhere except the trio thread. (But :ref:`see below
 
 .. _time-and-clocks:
 
-Time and clocks
----------------
+時間と時計
+-----
 
-Every call to :func:`run` has an associated clock.
+:func:`run` には常に時計が関連付けられています。
 
 By default, trio uses an unspecified monotonic clock, but this can be
 changed by passing a custom clock object to :func:`run` (e.g. for
@@ -231,17 +231,15 @@ custom :class:`~trio.abc.Clock` class:
 
 .. _cancellation:
 
-Cancellation and timeouts
--------------------------
+中断と時間制限
+-------
 
-Trio has a rich, composable system for cancelling work, either
-explicitly or when a timeout expires.
+Trioには明示的な中断や時間切れによる中断を行うための優れた仕組みがあります。
 
+単純な時間切れの例
+~~~~~~~~~
 
-A simple timeout example
-~~~~~~~~~~~~~~~~~~~~~~~~
-
-In the simplest case, you can apply a timeout to a block of code::
+これは最も単純な例で、blockに対して時間制限を設けています::
 
    with trio.move_on_after(30):
        result = await do_http_get("https://...")
@@ -883,7 +881,7 @@ Nursery objects provide the following interface:
       you execute a checkpoint and the scheduler decides to run it.
       If you want to run a function and immediately wait for its result,
       then you don't need a nursery; just use ``await async_fn(*args)``.
-      If you want to wait for the task to initialize itself before 
+      If you want to wait for the task to initialize itself before
       continuing, see :meth:`start()`.
 
       It's possible to pass a nursery object into another task, which
