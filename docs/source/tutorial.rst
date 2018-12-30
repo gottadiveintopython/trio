@@ -120,9 +120,9 @@ Async functions
 ---------------
 
 Python 3.5では一つ大きな機能が加わりました、async関数です。
-Trioを使うという事はasync関数を書くという事です。
+Trioを使うという事はこのasync関数を書くという事です。
 
-async関数は ``def`` の代わりに ``async def`` と書く事を除いては通常の関数と同じです::
+async関数の定義方法は ``def`` の代わりに ``async def`` と書く事を除いては通常の関数と同じです::
 
    # 通常の関数
    def regular_double(x):
@@ -132,8 +132,8 @@ async関数は ``def`` の代わりに ``async def`` と書く事を除いては
    async def async_double(x):
        return 2 * x
 
-"async" は "asynchronous" の略です。私達は時々通常の関数をasync関数と区別するために
-``regular_double`` という風に名付けるでしょう。
+"async" は "asynchronous" の略です。このtutorialでは通常の関数をasync関数と区別するために
+``regular_double`` という風に名前を付ける事が度々あるでしょう。
 
 関数を呼び出す側からすると、async関数と通常の関数には二つの違いがあります。
 
@@ -242,13 +242,7 @@ generally be regular, non-async functions.
 注意: ``await`` を忘れないで!
 ~~~~~~~~~~~~~~~~~~~~~
 
-Now would be a good time to open up a Python prompt and experiment a
-little with writing simple async functions and running them with
-``trio.run``.
-
-At some point in this process, you'll probably write some code like
-this, that tries to call an async function but leaves out the
-``await``::
+あなたは時折、以下のように `await` を書き忘れてしまう事があるかもしれません。::
 
    import time
    import trio
@@ -257,7 +251,7 @@ this, that tries to call an async function but leaves out the
        print("*yawn* Going to sleep")
        start_time = time.perf_counter()
 
-       # Whoops, we forgot the 'await'!
+       # おっと、'await'を書き忘れてしまった!
        trio.sleep(2 * x)
 
        sleep_time = time.perf_counter() - start_time
@@ -265,39 +259,33 @@ this, that tries to call an async function but leaves out the
 
    trio.run(broken_double_sleep, 3)
 
-You might think that Python would raise an error here, like it does
-for other kinds of mistakes we sometimes make when calling a
-function. Like, if we forgot to pass :func:`trio.sleep` its required
-argument, then we would get a nice :exc:`TypeError` saying so. But
-unfortunately, if you forget an ``await``, you don't get that. What
-you actually get is:
+この時、「どうせinterpreterが例外を投げてくれるから自分で気をつけなくてもいいや」と思っているのなら間違いです。
+この時起きるのは
 
 .. code-block:: none
 
    >>> trio.run(broken_double_sleep, 3)
    *yawn* Going to sleep
-   Woke up after 0.00 seconds, feeling well rested!
+   Woke up after 0.00 seconds, feeling well rested! (0.00秒後に起きた、よく眠れたぁ！)
    __main__:4: RuntimeWarning: coroutine 'sleep' was never awaited
    >>>
 
-This is clearly broken – 0.00 seconds is not long enough to feel well
-rested! Yet the code acts like it succeeded – no exception was
-raised. The only clue that something went wrong is that it prints
-``RuntimeWarning: coroutine 'sleep' was never awaited``. Also, the
-exact place where the warning is printed might vary, because it
-depends on the whims of the garbage collector. If you're using PyPy,
-you might not even get a warning at all until the next GC collection
-runs:
+という妙な出力です。 0.00秒はどう考えても満足のいく睡眠時間ではないでしょう！
+また例外も投げられず、まるで動作が上手くいったかのようです。
+失敗したんじゃないかと思わせる手がかりとして
+``RuntimeWarning: coroutine 'sleep' was never awaited``
+はありますが、実はこれがいつ出力されるかはgarbage collectorの気分次第なのであてにはできません。
+例えばもしPyPy(Pythonで書かれたPythonのinterpreter)を使っていた場合、この警告すらでないかもしれません。
 
 .. code-block:: none
 
-   # On PyPy:
+   # PyPyで実行:
    >>>> trio.run(broken_double_sleep, 3)
    *yawn* Going to sleep
    Woke up after 0.00 seconds, feeling well rested!
-   >>>> # what the ... ?? not even a warning!
+   >>>> # えっ？警告すら無い？？
 
-   >>>> # but forcing a garbage collection gives us a warning:
+   >>>> # でも強制的にgarbage collectionさせると警告が得られるよ
    >>>> import gc
    >>>> gc.collect()
    /home/njs/pypy-3.5-nightly/lib-python/3/importlib/_bootstrap.py:191: RuntimeWarning: coroutine 'sleep' was never awaited
@@ -307,35 +295,32 @@ runs:
 
 (If you can't see the warning above, try scrolling right.)
 
-Forgetting an ``await`` like this is an *incredibly common
-mistake*. You will mess this up. Everyone does. And Python will not
-help you as much as you'd hope 😞. The key thing to remember is: if
-you see the magic words ``RuntimeWarning: coroutine '...' was never
-awaited``, then this *always* means that you made the mistake of
-leaving out an ``await`` somewhere, and you should ignore all the
-other error messages you see and go fix that first, because there's a
-good chance the other stuff is just collateral damage. I'm not even
-sure what all that other junk in the PyPy output is. Fortunately I
-don't need to know, I just need to fix my function!
+`await` の書き忘れはとてもよくある間違いです。みんなやります。
+そしてPythonはこれに対してこちらが期待するほど助けてくれません。
+唯一の手がかりが
+``RuntimeWarning: coroutine '...' was never awaited``
+で、これが出た場合 必ずあなたがどこかで `await` を書き忘れたことを意味します。
+そしてそうなった場合他の全てのerrorは無視して先にこれを直すべきです。
+何故なら他のerrorはこのerrorから派生して起きていることがよくあるからです。
+そもそも上のPyPyの出したerrorの内 `RuntimeWarning` 以外の物が何を意味しているか私には全く分かりません。
+幸運にもそれを知る必要はなく、ただ `await` を書き足すせばいいだけです。
 
-("I thought you said you weren't going to mention coroutines!" Yes,
-well, *I* didn't mention coroutines, Python did. Take it up with
-Guido! But seriously, this is unfortunately a place where the internal
-implementation details do leak out a bit.)
+(「さっき"coroutine"という言葉は使わないって言ってなかったっけ？」
+うん、えっと... **私** は言ってないよ、interpreterが言ったんだ。文句があるならGuidoに言ってくれ！
+でも真面目な話、このように内部詳細が漏れてしまうのは不本意だよ。)
 
-Why does this happen? In Trio, every time we use ``await`` it's to
-call an async function, and every time we call an async function we
-use ``await``. But Python's trying to keep its options open for other
-libraries that are *ahem* a little less organized about things. So
-while for our purposes we can think of ``await trio.sleep(...)`` as a
-single piece of syntax, Python thinks of it as two things: first a
-function call that returns this weird "coroutine" object::
+どうしてこうなっているか?
+Trioでは ``await`` を使う時は全てasync関数を呼ぶ時で、async関数を呼ぶときには常に ``await`` を使います。
+でもPythonは他にも *チョメチョメ* なことができるよう選択肢を与えてくれているのです。
+私達は ``await trio.sleep(...)`` を一つの構文として覚えてしまっても差し支えありませんが、
+Pythonは二つに分けて考えています。::
 
-   >>> trio.sleep(3)
-   <coroutine object sleep at 0x7f5ac77be6d0>
+  >>> trio.sleep(3)
+  <coroutine object sleep at 0x7f5ac77be6d0>
 
-and then that object gets passed to ``await``, which actually runs the
-function. So if you forget ``await``, then two bad things happen: your
+まず ``trio.sleep(...)`` はこのように奇妙な "coroutine" objectを返します。
+そしてそのobjectが ``await`` に渡された時にはじめて関数が実行されます。
+So if you forget ``await``, then two bad things happen: your
 function doesn't actually get called, and you get a "coroutine" object
 where you might have been expecting something else, like a number::
 
@@ -347,20 +332,18 @@ purpose: try writing some code with a missing ``await``, or an extra
 ``await``, and see what you get. This way you'll be prepared for when
 it happens to you for real.
 
-And remember: watch out for ``RuntimeWarning: coroutine '...' was
-never awaited``; it means you need to find and fix your missing
-``await``.
+そして ``RuntimeWarning: coroutine '...' was never awaited`` を忘れないでください。
+これが意味するのは常に "どこかで ``await`` を書き忘れている" という事です。
 
 
-Okay, let's see something cool already
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+なるほどね、じゃあそろそろ何かいかした物を見せてくれよ
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-So now we've started using trio, but so far all we've learned to do is
-write functions that print things and sleep for various lengths of
-time. Interesting enough, but we could just as easily have done that
-with :func:`time.sleep`. ``async/await`` is useless!
+これまでasync関数の書いて中でprintやsleepをさせたりして来ました。
+でもそんな事 :func:`time.sleep` でもできるじゃないか！
+``async/await`` は使えないなぁ!
 
-Well, not really. Trio has one more trick up its sleeve, that makes
+えっと、それは違うよ。Trio has one more trick up its sleeve, that makes
 async functions more powerful than regular functions: it can run
 multiple async functions *at the same time*. Here's an example:
 
