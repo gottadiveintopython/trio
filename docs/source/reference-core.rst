@@ -196,7 +196,7 @@ functions from anywhere except the trio thread. (But :ref:`see below
 時間と時計
 -----
 
-:func:`run` には常に時計が関連付けられています。
+:func:`run` には常に何らかの時計が関連付けられています。
 
 By default, trio uses an unspecified monotonic clock, but this can be
 changed by passing a custom clock object to :func:`run` (e.g. for
@@ -234,57 +234,47 @@ custom :class:`~trio.abc.Clock` class:
 中断と時間制限
 -------
 
-Trioには明示的な中断や時間切れによる中断を行うための優れた仕組みがあります。
+Trioには明示的な中断や時間制限による中断を行うための優れた仕組みがあります。
 
-単純な時間切れの例
+単純な時間制限の例
 ~~~~~~~~~
 
-これは最も単純な例で、blockに対して時間制限を設けています::
+これは最も単純な例で、with blockに対して時間制限を設けています::
 
    with trio.move_on_after(30):
        result = await do_http_get("https://...")
        print("result is", result)
    print("with block finished")
 
-We refer to :func:`move_on_after` as creating a "cancel scope", which
-contains all the code that runs inside the ``with`` block. If the HTTP
-request takes more than 30 seconds to run, then it will be cancelled:
-we'll abort the request and we *won't* see ``result is ...`` printed
-on the console; instead we'll go straight to printing the ``with block
-finished`` message.
+:func:`move_on_after` は"cancel scope"という物を作ります。
+これによりもしHTTP requestが30秒経っても返ってこなかった場合、そのrequestは中断され
+``result is ...`` も出力されず、 ``with block finished`` のみが出力されます。
 
 .. note::
 
-   Note that this is a single 30 second timeout for the entire body of
-   the ``with`` statement. This is different from what you might have
+   30秒の時間制限がwith block内の各await呼び出しではなくwith block全体に対してかけられていることに注意してください。
+   This is different from what you might have
    seen with other Python libraries, where timeouts often refer to
    something `more complicated
    <http://docs.python-requests.org/en/master/user/quickstart/#timeouts>`__. We
    think this way is easier to reason about.
 
-How does this work? There's no magic here: trio is built using
-ordinary Python functionality, so we can't just abandon the code
-inside the ``with`` block. Instead, we take advantage of Python's
-standard way of aborting a large and complex piece of code: we raise
-an exception.
+どういう仕組みで動いてるかですか？何も特別な事はしていません。
+TrioはPythonの一般的な機能でできているので、特定のcodeを無力化するような魔術は使えません。
+代わりにPythonにおいてcodeの塊を飛ばしたい時の主流方法である例外を使っています。
 
-Here's the idea: whenever you call a cancellable function like ``await
-trio.sleep(...)`` or ``await sock.recv(...)`` – see :ref:`checkpoints`
-– then the first thing that function does is to check if there's a
-surrounding cancel scope whose timeout has expired, or otherwise been
-cancelled. If so, then instead of performing the requested operation,
-the function fails immediately with a :exc:`Cancelled` exception. In
-this example, this probably happens somewhere deep inside the bowels
-of ``do_http_get``. The exception then propagates out like any normal
-exception (you could even catch it if you wanted, but that's generally
-a bad idea), until it reaches the ``with move_on_after(...):``. And at
-this point, the :exc:`Cancelled` exception has done its job – it's
-successfully unwound the whole cancelled scope – so
-:func:`move_on_after` catches it, and execution continues as normal
-after the ``with`` block. And this all works correctly even if you
-have nested cancel scopes, because every :exc:`Cancelled` object
-carries an invisible marker that makes sure that the cancel scope that
-triggered it is the only one that will catch it.
+あなたが ``await trio.sleep(...)`` や ``await sock.recv(...)``
+のような中断可能な関数を呼んだ時、その関数が最初に行うのは 自身が既に **時間切れ又はcancel済み**
+になっているcancel scope に囲われていないかの確認です。
+そしてそうだった場合、要求された処理を行う代わりに直ちに :exc:`Cancelled` 例外を投げます。
+上記の例でいうなら、多分それは ``do_http_get`` 内のどこか深い所で起きるでしょう。
+そして通常の例外と同じように外側に伝達されていき、
+``with move_on_after(...):`` に達した時にその役目を終えます。
+(この例外を自分で捕らえる事はできますが、基本的にお薦めしません。)
+例外は ``with move_on_after(...):`` に捕らえられ、codeはwith
+blockの後から通常通りに実行されます。
+これらの動作は例えcancel scopeが入れ子になっていたとしても、うまく動いてくれます。
+何故なら各 :exc:`Cancelled` object は自身が属するcancel scopeを表す印を持っているからです。
 
 
 Handling cancellation
