@@ -7,8 +7,7 @@ Trioの中核機能
 Entering trio
 -------------
 
-If you want to use trio, then the first thing you have to do is call
-:func:`trio.run`:
+Trioを使いたいのなら、まず :func:`trio.run` を呼ぶ必要があります:
 
 .. autofunction:: run
 
@@ -27,32 +26,26 @@ trioの多くの関数はこのcheckpointとして機能します。
 checkpointには二つの役割があります:
 
 1. 一つはそこが中断可能な地点になることです。
-   例えばあなたの書いた関数を呼び出した側が時間制限を設けたとして、それが過ぎたとします。
+   例えばあなたの書いた関数を呼び出したcodeが時間制限を設けたとして、それが過ぎたとします。
    するとあなたの書いた関数がcheckpointに差し掛かった時点でtrioは
    :exc:`Cancelled` 例外を投げます。
    詳しくは :ref:`cancellation` を見てください。
 
 2. もう一つはそこが他のtaskへの切り替え可能な地点になることです。
    trioはここで他のtaskに切り替えるべきか否かを考え、良い頃合いだと判断すれば切り替えます。
-   (現在の実装は単純で、checkpointに差し掛かると常に他のtaskに切り替わります。
+   (現在の実装は単純で、checkpointに差し掛かると必ず他のtaskに切り替わります。
    ただこれは将来変わるかもしれません。
    <https://github.com/python-trio/trio/issues/32>`__.)
 
-When writing trio code, you need to keep track of where your
-checkpoints are. Why? First, because checkpoints require extra
-scrutiny: whenever you execute a checkpoint, you need to be prepared
-to handle a :exc:`Cancelled` error, or for another task to run and
-`rearrange some state out from under you
-<https://glyph.twistedmatrix.com/2014/02/unyielding.html>`__. And
-second, because you also need to make sure that you have *enough*
-checkpoints: if your code doesn't pass through a checkpoint on a
-regular basis, then it will be slow to notice and respond to
-cancellation and – much worse – since trio is a cooperative
-multi-tasking system where the *only* place the scheduler can switch
-tasks is at checkpoints, it'll also prevent the scheduler from fairly
-allocating time between different tasks and adversely effect the
-response latency of all the other code running in the same
-process. (Informally we say that a task that does this is "hogging the
+Trioを使っている時には、 checkpointの位置や数に注意を払わないといけません。
+何故かって？まずcheckpointでは中断や他のtaskへの切り替えが起こりうるので、
+:exc:`Cancelled` 例外や他のtaskによる状態の変化に備えないといけません。
+<https://glyph.twistedmatrix.com/2014/02/unyielding.html>`__
+次に十分な数のcheckpointがあるか確かめないといけません。
+数が少ないとそのcodeは中断要求に対する反応が遅れるほか、他のtaskの時間を奪ってしまうからです。
+Trioは協調的multi-taskingなので、codeを書いているあなた自身が適切にcheckpointを置いて
+Trioが他のtaskに切り替える機会を与えてあげないといけません。
+(Informally we say that a task that does this is "hogging the
 run loop".)
 
 So when you're doing code review on a project that uses trio, one of
@@ -82,41 +75,35 @@ Don't worry – trio's got your back. Since checkpoints are important
 and ubiquitous, we make it as simple as possible to keep track of
 them. Here are the rules:
 
-* Regular (synchronous) functions never contain any checkpoints.
+* 同期関数は絶対にcheckpointを持ちません。
 
-* Every async function provided by trio *always* acts as a check
-  point; if you see ``await <something in trio>``, or ``async for
-  ... in <a trio object>``, or ``async with <trio.something>``, then
-  that's *definitely* a checkpoint.
+* 全てのtrioの関数は常にcheckpointとして機能します。
+  なのでもし``await <something in trio>`` や ``async for ... in <a trio object>``
+  や ``async with <trio.something>`` と書かれていた時、そこは必ずcheckpointです。
 
-  (Partial exception: for async context managers, it might be only the
+  (例外: for async context managers, it might be only the
   entry or only the exit that acts as a checkpoint; this is
   documented on a case-by-case basis.)
 
-* Third-party async functions can act as checkpoints; if you see
-  ``await <something>`` or one of its friends, then that *might* be a
-  checkpoint. So to be safe, you should prepare for scheduling or
-  cancellation happening there.
+* 第三者の書いたasync関数もcheckpointになりえます。
+  もし ``await <something>`` と書かれていた場合、それはcheckpointかもしれません。
+  なので万全を期するのならそこで他のtaskへの切り替えや中断に備えなければなりません。
 
-The reason we distinguish between trio functions and other functions
-is that we can't make any guarantees about third party
-code. Checkpoint-ness is a transitive property: if function A acts as
-a checkpoint, and you write a function that calls function A, then
-your function also acts as a checkpoint. If you don't, then it
-isn't. So there's nothing stopping someone from writing a function
-like::
+trioの関数と他の関数を区別しているのは、第三者の書いたcodeには何の保証もできないからです。
+Checkpoint-ness is a transitive property
+もしとある関数がcheckpointであなたの書いた関数がその関数を呼んでいるのなら、
+あなたの書いた関数もcheckpointです。もし呼んでいないならcheckpointではありません。
+誰にも以下のような、trioの関数を全く呼ばないような関数を書くことは止められないのです::
 
-   # technically legal, but bad style:
+   # 構文上間違ってはいないが、よくない書き方
    async def why_is_this_async():
        return 7
 
-that never calls any of trio's async functions. This is an async
-function, but it's not a checkpoint. But why make a function async if
-it never calls any async functions? It's possible, but it's a bad
-idea. If you have a function that's not calling any async functions,
-then you should make it synchronous. The people who use your function
-will thank you, because it makes it obvious that your function is not
-a checkpoint, and their code reviews will go faster.
+これはasync関数ではあってもcheckpointではありません。
+そもそもなんで内部で一切async関数を呼ばない関数をasyncにしているのでしょうね。
+It's possible, but it's a bad idea.
+もしこのような関数があるのなら非asyncに直した方が周りの人は喜ぶでしょう。
+その方がcheckpointを持たない事が明らかだからです。
 
 (Remember how in the tutorial we emphasized the importance of the
 :ref:`"async sandwich" <async-sandwich>`, and the way it means that
@@ -135,13 +122,10 @@ A slightly trickier case is a function like::
        else:
            pass
 
-Here the function acts as a checkpoint if you call it with
-``should_sleep`` set to a true value, but not otherwise. This is why
-we emphasize that trio's own async functions are *unconditional* check
-points: they *always* check for cancellation and check for scheduling,
-regardless of what arguments they're passed. If you find an async
-function in trio that doesn't follow this rule, then it's a bug and
-you should `let us know
+この関数は ``should_sleep`` が真である時のみcheckpointとして働き、偽だと働きません。
+これが私達が「trioの関数は全て無条件にcheckpointになる」としつこく言う理由です。
+trioの関数は渡された引数に関わらす常に中断やtask切り替えの必要性を確認します。
+もしそうではないtrioの関数を見つけたらbugなので教えてください。
 <https://github.com/python-trio/trio/issues>`__.
 
 Inside trio, we're very picky about this, because trio is the
