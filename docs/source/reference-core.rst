@@ -34,17 +34,17 @@ checkpointには二つの役割があります:
 2. もう一つはそこが他のtaskへの切り替え可能な地点になることです。
    trioはここで他のtaskに切り替えるべきか否かを考え、良い頃合いだと判断すれば切り替えます。
    (現在の実装は単純で、checkpointに差し掛かると必ず他のtaskに切り替わります。
-   ただこれは将来変わるかもしれません。
-   <https://github.com/python-trio/trio/issues/32>`__.)
+   `ただこれは将来変わるかもしれません。 <https://github.com/python-trio/trio/issues/32>`__
+   )
 
 Trioを使っている時には、 checkpointの位置や数に注意を払わないといけません。
 何故かって？まずcheckpointでは中断や他のtaskへの切り替えが起こりうるので、
-:exc:`Cancelled` 例外や他のtaskによる状態の変化に備えないといけません。
-<https://glyph.twistedmatrix.com/2014/02/unyielding.html>`__
+:exc:`Cancelled` 例外や
+`他のtaskによる状態の変化に備えないといけません。 <https://glyph.twistedmatrix.com/2014/02/unyielding.html>`__
 次に十分な数のcheckpointがあるか確かめないといけません。
 数が少ないとそのcodeは中断要求に対する反応が遅れるほか、他のtaskの時間を奪ってしまうからです。
 Trioは協調的multi-taskingなので、codeを書いているあなた自身が適切にcheckpointを置いて
-Trioが他のtaskに切り替える機会を与えてあげないといけません。
+Trioが他のtaskに切り替える機会を与えてあげないといけないのです。
 (Informally we say that a task that does this is "hogging the
 run loop".)
 
@@ -122,11 +122,12 @@ A slightly trickier case is a function like::
        else:
            pass
 
-この関数は ``should_sleep`` が真である時のみcheckpointとして働き、偽だと働きません。
-これが私達が「trioの関数は全て無条件にcheckpointになる」としつこく言う理由です。
+この関数は引数 ``should_sleep`` が真である時のみcheckpointとして働き、偽だと働きません。
+[...省略...]
 trioの関数は渡された引数に関わらす常に中断やtask切り替えの必要性を確認します。
-もしそうではないtrioの関数を見つけたらbugなので教えてください。
-<https://github.com/python-trio/trio/issues>`__.
+(つまり常にcheckpointとして機能する)。
+もしそうではないtrioの関数を見つけたらbugなので
+`教えてください <https://github.com/python-trio/trio/issues>`__。
 
 Inside trio, we're very picky about this, because trio is the
 foundation of the whole system so we think it's worth the extra effort
@@ -155,12 +156,11 @@ trio itself, then this wouldn't be acceptable, but you may decide you
 don't want to worry about this kind of minor edge case in your own
 code.
 
-If you do want to be careful, or if you have some CPU-bound code that
-doesn't have enough checkpoints in it, then it's useful to know that
-``await trio.sleep(0)`` is an idiomatic way to execute a checkpoint
-without doing anything else, and that
-:func:`trio.testing.assert_checkpoints` can be used to test that an
-arbitrary block of code contains a checkpoint.
+もしcheckpointに気を払いたくない 又は CPU負荷が高いのにcheckpointが少ないcodeがある
+という場合は、 ``await trio.sleep(0)`` が使えます。
+これは特に何もせずにcheckpointだけを作りたい時の常套手段です。
+また、ある関数がcheckpointとして機能するかどうかのtestとして
+:func:`trio.testing.assert_checkpoints` が使えるでしょう。
 
 
 Thread 安全性
@@ -223,7 +223,7 @@ Trioには明示的な中断や時間制限による中断を行うための優�
 単純な時間制限の例
 ~~~~~~~~~
 
-これは最も単純な例で、with blockに対して時間制限を設けています::
+これは最も単純な例で、with blockに対して制限時間を設けています::
 
    with trio.move_on_after(30):
        result = await do_http_get("https://...")
@@ -245,7 +245,7 @@ Trioには明示的な中断や時間制限による中断を行うための優�
 
 どういう仕組みで動いてるかですか？何も特別な事はしていません。
 TrioはPythonの一般的な機能でできているので、特定のcodeを無力化するような魔術は使えません。
-代わりにPythonにおいてcodeの塊を飛ばしたい時の主流方法である例外を使っています。
+代わりにPythonにおいてcodeの塊を飛ばしたい時の一般的な方法である例外を使っています。
 
 あなたが ``await trio.sleep(...)`` や ``await sock.recv(...)``
 のような中断可能な関数を呼んだ時、その関数が最初に行うのは 自身が既に **時間切れ又はcancel済み**
@@ -258,7 +258,7 @@ TrioはPythonの一般的な機能でできているので、特定のcodeを無
 例外は ``with move_on_after(...):`` に捕らえられ、codeはwith
 blockの後から通常通りに実行されます。
 これらの動作は例えcancel scopeが入れ子になっていたとしても、うまく動いてくれます。
-何故なら各 :exc:`Cancelled` object は自身が属するcancel scopeを表す印を持っているからです。
+何故なら各 :exc:`Cancelled` object は自身が属するcancel scopeを識別する印を持っているからです。
 
 
 Handling cancellation
@@ -309,59 +309,56 @@ configure timeouts on individual requests.
 Cancellation semantics
 ~~~~~~~~~~~~~~~~~~~~~~
 
-You can freely nest cancellation blocks, and each :exc:`Cancelled`
-exception "knows" which block it belongs to. So long as you don't stop
-it, the exception will keep propagating until it reaches the block
-that raised it, at which point it will stop automatically.
+:exc:`Cancelled` 例外は自身が属するcancel scopeを知っているので、
+あなたは自由にscopeを入れ子にできます。
+なので明示的に捕らえない限りは例外は上に伝搬され、属するwith blockに達した時点で伝搬が止まります。
 
-Here's an example::
+これが一例で::
 
    print("starting...")
    with trio.move_on_after(5):
        with trio.move_on_after(10):
-           await sleep(20)
+           await trio.sleep(20)
            print("sleep finished without error")
        print("move_on_after(10) finished without error")
    print("move_on_after(5) finished without error")
 
-In this code, the outer scope will expire after 5 seconds, causing the
-:func:`sleep` call to return early with a :exc:`Cancelled`
-exception. Then this exception will propagate through the ``with
-move_on_after(10)`` line until it's caught by the ``with
-move_on_after(5)`` context manager. So this code will print:
+外側のscopeで設けた5秒の時間制限により ``await trio.sleep(20)``
+は20秒経つ前に中断され :exc:`Cencelled` 例外が起こります。
+そしてこの例外は ``with move_on_after(10)`` を素通りして
+``with move_on_after(5)`` に達した所で捕まえられます。
+結果、出力は:
 
 .. code-block:: none
 
    starting...
    move_on_after(5) finished without error
 
+となります。
 The end result is that trio has successfully cancelled exactly the
 work that was happening within the scope that was cancelled.
 
-Looking at this, you might wonder how you can tell whether the inner
-block timed out – perhaps you want to do something different, like try
-a fallback procedure or report a failure to our caller. To make this
-easier, :func:`move_on_after`\´s ``__enter__`` function returns an
-object representing this cancel scope, which we can use to check
-whether this scope caught a :exc:`Cancelled` exception::
+もしかしたら **時間切れが起きたのか** それとも **時間内に処理が終わったのか**
+によって処理を分けたい事があるかもしれません。その場合は以下のようにします::
 
    with trio.move_on_after(5) as cancel_scope:
-       await sleep(10)
+   await trio.sleep(10)
    print(cancel_scope.cancelled_caught)  # prints "True"
 
-The ``cancel_scope`` object also allows you to check or adjust this
-scope's deadline, explicitly trigger a cancellation without waiting
-for the deadline, check if the scope has already been cancelled, and
-so forth – see :func:`open_cancel_scope` below for the full details.
+:func:`move_on_after` の ``__enter__`` はcancel scopeを表すobjectを返すので、その
+``cancelled_cought`` 属性を調べば分かります。
+
+``cancel_scope`` objectは他にも幾つかの機能を提供します。
+例えば制限時間を確認/変更したり、時間切れになる前に明示的にcancelをしたりなどです。
+詳しくは :func:`open_cancel_scope` を見てください。
 
 .. _blocking-cleanup-example:
 
-Cancellations in trio are "level triggered", meaning that once a block
-has been cancelled, *all* cancellable operations in that block will
-keep raising :exc:`Cancelled`. This helps avoid some pitfalls around
-resource clean-up. For example, imagine that we have a function that
-connects to a remote server and sends some messages, and then cleans
-up on the way out::
+trioにおける中断は"level triggerd"です。
+これが意味するのは一度でも中断が起きると、そのscopeに属する全ての操作は :exc:`Cancelled`
+例外を投げ続けるという事です。
+そしてこれがresourceの後始末をする際に陥りやすいある種の罠を回避してくれます。
+例えばremote serverに接続して何かmessageを送った後に接続を切りたかったとしましょう::
 
    with trio.move_on_after(TIMEOUT):
        conn = make_connection()
@@ -370,25 +367,22 @@ up on the way out::
        finally:
            await conn.send_goodbye_msg()
 
-Now suppose that the remote server stops responding, so our call to
-``await conn.send_hello_msg()`` hangs forever. Fortunately, we were
-clever enough to put a timeout around this code, so eventually the
-timeout will expire and ``send_hello_msg`` will raise
-:exc:`Cancelled`. But then, in the ``finally`` block, we make another
-blocking operation, which will also hang forever! At this point, if we
-were using :mod:`asyncio` or another library with "edge-triggered"
-cancellation, we'd be in trouble: since our timeout already fired, it
-wouldn't fire again, and at this point our application would lock up
-forever. But in trio, this *doesn't* happen: the ``await
-conn.send_goodbye_msg()`` call is still inside the cancelled block, so
-it will also raise :exc:`Cancelled`.
+ここでremote serverが返事をしなくなったとします。すると
+``await conn.send_hello_msg()`` の部分で進行はとまります。
+幸運にも制限時間を設けているので、しばらくすると ``send_hello_msg`` は
+:exc:`Cancelled` 例外を起こします。
+ところが ``finally`` blockでは再びremote serverへ送信しています。
+ここでもしあなたが :mod:`asyncio` を使っているなら困った事になります。
+時間制限による例外は既に起きているため再び起きることは無く、ここで処理が永遠に止まります。
+でもtrioではその心配はありません。
+``await conn.send_goodbye_msg()`` は ``await conn.send_hello_msg()``
+と同じcancel scope、つまりは既にcancel済みのscopeに属しているので直ちに
+:exc:`Cancelled` 例外を投げてくれるのです。
 
-Of course, if you really want to make another blocking call in your
-cleanup handler, trio will let you; it's trying to prevent you from
-accidentally shooting yourself in the foot. Intentional foot-shooting
-is no problem (or at least – it's not trio's problem). To do this,
-create a new scope, and set its :attr:`~The cancel scope interface.shield`
-attribute to :data:`True`::
+勿論、どうしても後始末の際に何か待たされる恐れのある処理をしたいというのならtrioはそれを邪魔しません。
+trioはただ不本意に自分の足を撃ってしまわないようにするだけです。故意であるなら問題はありません。
+そのような事がしたい場合は 新たにcancel scopeを作り、その
+:attr:`~The cancel scope interface.shield` 属性に :data:`True` を入れます::
 
    with trio.move_on_after(TIMEOUT):
        conn = make_connection()
